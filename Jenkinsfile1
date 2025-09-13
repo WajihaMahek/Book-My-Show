@@ -1,4 +1,3 @@
-(without K8S Stage)
 pipeline {
     agent any
     tools {
@@ -16,7 +15,7 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git branch: 'main', url: 'https://github.com/akshu20791/Book-My-Show.git'
+                git branch: 'main', url: 'https://github.com/WajihaMahek/Book-My-Show.git'
                 sh 'ls -la'  // Verify files after checkout
             }
         }
@@ -24,8 +23,9 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh ''' 
-                    $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=BMS \
-                    -Dsonar.projectKey=BMS 
+                    $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=BMS \
+                        -Dsonar.projectKey=BMS
                     '''
                 }
             }
@@ -43,19 +43,13 @@ pipeline {
                 cd bookmyshow-app
                 ls -la  # Verify package.json exists
                 if [ -f package.json ]; then
-                    rm -rf node_modules package-lock.json  # Remove old dependencies
-                    npm install  # Install fresh dependencies
+                    rm -rf node_modules package-lock.json
+                    npm install
                 else
                     echo "Error: package.json not found in bookmyshow-app!"
                     exit 1
                 fi
                 '''
-            }
-        }
-        stage('OWASP FS Scan') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
         stage('Trivy FS Scan') {
@@ -69,10 +63,10 @@ pipeline {
                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
                         sh ''' 
                         echo "Building Docker image..."
-                        docker build --no-cache -t kastrov/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
+                        docker build --no-cache -t wajihamahek/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
 
                         echo "Pushing Docker image to registry..."
-                        docker push kastrov/bms:latest
+                        docker push wajihamahek/bms:latest
                         '''
                     }
                 }
@@ -86,13 +80,13 @@ pipeline {
                 docker rm bms || true
 
                 echo "Running new container on port 3000..."
-                docker run -d --restart=always --name bms -p 3000:3000 kastrov/bms:latest
+                docker run -d --restart=always --name bms -p 3000:3000 wajihamahek/bms:latest
 
                 echo "Checking running containers..."
                 docker ps -a
 
                 echo "Fetching logs..."
-                sleep 5  # Give time for the app to start
+                sleep 5
                 docker logs bms
                 '''
             }
@@ -105,8 +99,8 @@ pipeline {
                 body: "Project: ${env.JOB_NAME}<br/>" +
                       "Build Number: ${env.BUILD_NUMBER}<br/>" +
                       "URL: ${env.BUILD_URL}<br/>",
-                to: 'kastrokiran@gmail.com',
-                attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+                to: 'your-email@example.com',   // 👈 replace with your email
+                attachmentsPattern: 'trivyfs.txt'
         }
     }
 }
